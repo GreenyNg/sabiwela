@@ -1,0 +1,82 @@
+"use server";
+
+import { redirect } from "next/navigation";
+import { revalidatePath } from "next/cache";
+import { z } from "zod";
+import { createClient } from "@/lib/supabase/server";
+import { parseOutline } from "@/lib/outline";
+
+const id = z.string().uuid();
+const name = z.string().trim().min(1).max(120);
+const fail = (msg: string): never => redirect(`/library?error=${encodeURIComponent(msg)}`);
+
+export async function addCourse(formData: FormData) {
+  const parsed = z
+    .object({ name, outline: z.string().max(20000) })
+    .safeParse({ name: formData.get("name"), outline: formData.get("outline") ?? "" });
+  if (!parsed.success) return fail("Please enter a course name.");
+
+  const supabase = await createClient();
+  const { data: course, error } = await supabase
+    .from("courses")
+    .insert({ name: parsed.data.name })
+    .select("id")
+    .single();
+  if (error || !course) return fail("Could not save the course. Please try again.");
+
+  const items = parseOutline(parsed.data.outline);
+  if (items.length) {
+    const ids = items.map(() => crypto.randomUUID());
+    const stack: { depth: number; id: string }[] = [];
+    const rows = items.map((it, i) => {
+      while (stack.length && stack[stack.length - 1].depth >= it.depth) stack.pop();
+      const parent = stack.length ? stack[stack.length - 1].id : null;
+      stack.push({ depth: it.depth, id: ids[i] });
+      return { id: ids[i], course_id: course.id, parent_topic_id: parent, name: it.name, sort_order: i };
+    });
+    const { error: topicError } = await supabase.from("topics").insert(rows);
+    if (topicError) return fail("The course was saved, but its topics could not be.");
+  }
+
+  revalidatePath("/library");
+  redirect(`/library?c=${course.id}`);
+}
+
+export async function addTopic(formData: FormData) {
+  const c = id.safeParse(formData.get("courseId"));
+  const n = name.safeParse(formData.get("name"));
+  if (!c.success || !n.success) return;
+  const supabase = await createClient();
+  const { count } = await supabase
+    .from("topics")
+    .select("id", { count: "exact", head: true })
+    .eq("course_id", c.data);
+  await supabase.from("topics").insert({ course_id: c.data, name: n.data, sort_order: count ?? 0 });
+  revalidatePath("/library");
+}
+
+export async function renameTopic(formData: FormData) {
+  const t = id.safeParse(formData.get("id"));
+  const n = name.safeParse(formData.get("name"));
+  if (!t.success || !n.success) return;
+  const supabase = await createClient();
+  await supabase.from("topics").update({ name: n.data }).eq("id", t.data);
+  revalidatePath("/library");
+}
+
+export async function deleteTopic(formData: FormData) {
+  const t = id.safeParse(formData.get("id"));
+  if (!t.success) return;
+  const supabase = await createClient();
+  await supabase.from("topics").delete().eq("id", t.data);
+  revalidatePath("/library");
+}
+
+export async function deleteCourse(formData: FormData) {
+  const c = id.safeParse(formData.get("id"));
+  if (!c.success) return;
+  const supabase = await createClient();
+  await supabase.from("courses").delete().eq("id", c.data);
+  revalidatePath("/library");
+  redirect("/library");
+}
