@@ -126,3 +126,23 @@ export async function deleteCourse(formData: FormData) {
   revalidatePath("/library");
   redirect("/library");
 }
+
+export async function generateConcepts(formData: FormData) {
+  const t = id.safeParse(formData.get("id"));
+  if (!t.success) return;
+  const supabase = await createClient();
+  const { data: topic } = await supabase.from("topics").select("id,name,courses(name)").eq("id", t.data).maybeSingle();
+  if (!topic) return;
+  const rel = Array.isArray(topic.courses) ? topic.courses[0] : topic.courses;
+  try {
+    const out = await getHouseLLM().generateJson({
+      system: "You list the key ideas a university learner must be able to explain for a topic. Reply with JSON only.",
+      prompt: `Course: ${rel?.name ?? ""}\nTopic: ${topic.name}\nList 3 to 6 short key concepts a learner must be able to explain. Return JSON: {"concepts": [string]}`,
+      schema: z.object({ concepts: z.array(z.string().max(160)).min(3).max(8) }),
+    });
+    await supabase.from("topics").update({ expected_concepts: out.concepts }).eq("id", t.data);
+  } catch (e) {
+    console.error("Concept generation failed:", e instanceof Error ? e.message : e);
+  }
+  revalidatePath(`/session/${t.data}/study`);
+}

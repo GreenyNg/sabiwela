@@ -17,7 +17,7 @@ import type { AssessState } from "@/lib/types";
 
 const input = z.object({
   topicId: z.string().uuid(),
-  text: z.string().trim().min(15, "Please explain a bit more, at least a couple of sentences.").max(8000, "That is too long. Please shorten it."),
+  text: z.string().trim().max(8000, "That is too long. Please shorten it.").refine((t) => t.split(/\s+/).filter(Boolean).length >= 8, "Please write at least a sentence or two (8 words or more)."),
   studySeconds: z.coerce.number().int().min(0).max(86400).catch(0),
   explainSeconds: z.coerce.number().int().min(0).max(7200).catch(0),
   mode: z.enum(["voice", "text"]).catch("text"),

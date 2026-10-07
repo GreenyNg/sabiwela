@@ -56,3 +56,9 @@ describe("streak", () => {
     expect(r.freezes_left).toBe(2);
   });
 });
+
+describe("points threshold", () => {
+  it("gives no points when the score is below the minimum", () => {
+    expect(awardPoints({ score: 5, isReview: false, previousScore: null, earnedToday: 0 })).toBe(0);
+  });
+});

@@ -7,6 +7,7 @@ export function awardPoints(args: {
   earnedToday: number;
 }): number {
   const { base, reviewBonus, improvementPer10, improvementCap, dailyCap } = CONFIG.kp;
+  if (args.score < CONFIG.kp.minScore) return 0;
   let kp = base + Math.floor(args.score / 10);
   if (args.isReview) kp += reviewBonus;
   if (args.previousScore !== null) {

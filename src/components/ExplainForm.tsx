@@ -34,6 +34,7 @@ export default function ExplainForm({ topicId, studySeconds }: { topicId: string
         placeholder="Explain it like you're teaching someone who has never learned it. No notes."
       />
       <p className="mute">{words} words</p>
+      {words >= 8 && words < 40 && <p className="note">Short explanations are hard to assess. Add why it works and an example if you can.</p>}
       {state.error && <p className="err" role="alert">{state.error}</p>}
       <p className="mute">Your explanation, the topic name and its key concepts are sent to an AI service (Google Gemini). Don&apos;t include private information.</p>
       <Submit />

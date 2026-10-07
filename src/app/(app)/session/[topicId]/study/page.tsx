@@ -1,6 +1,7 @@
 import { notFound } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import StudyTimer from "@/components/StudyTimer";
+import { generateConcepts } from "@/app/(app)/library/actions";
 
 export default async function StudyPage({ params }: { params: Promise<{ topicId: string }> }) {
   const { topicId } = await params;
@@ -18,11 +19,17 @@ export default async function StudyPage({ params }: { params: Promise<{ topicId:
       <div className="mute">{courseRel?.name}</div>
       <h1>{topic.name}</h1>
       <StudyTimer topicId={topicId} />
-      {concepts.length > 0 && (
+      {concepts.length > 0 ? (
         <details className="box">
           <summary>Peek at the key concepts (optional)</summary>
           <ul>{concepts.map((c, i) => <li key={i}>{c}</li>)}</ul>
         </details>
+      ) : (
+        <form action={generateConcepts} className="box">
+          <input type="hidden" name="id" value={topicId} />
+          <p className="mute">No key concepts yet. They help the AI judge your explanation more accurately.</p>
+          <button className="btn ghost sm">Generate key concepts</button>
+        </form>
       )}
     </>
   );
