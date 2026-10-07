@@ -52,3 +52,9 @@ a{color:var(--ac)}
 .edb{position:absolute;right:10px;bottom:12px;min-width:44px}.pw.ind{margin-left:22px}
 dialog.sheet{position:fixed;inset:auto 0 0 0;margin:0 auto;width:100%;max-width:640px;border:0;border-radius:20px 20px 0 0;padding:12px 18px calc(20px + env(safe-area-inset-bottom,0px));background:var(--card);color:var(--ink);max-height:90vh;overflow:auto}
 dialog.sheet::backdrop{background:rgba(0,0,0,.45)}.grab{width:40px;height:4px;border-radius:9px;background:var(--line);margin:0 auto 12px}
+.prog{display:flex;gap:12px;align-items:center;margin-top:14px;font-weight:500}
+.spin{width:18px;height:18px;border-radius:50%;border:3px solid var(--line);border-top-color:var(--ac);animation:sp .9s linear infinite;flex:none}
+@keyframes sp{to{transform:rotate(360deg)}}
+.pbar{height:6px;border-radius:9px;background:var(--line);overflow:hidden;margin-top:8px}
+.pbar i{display:block;height:100%;background:var(--ac);transition:width 2.5s ease}
+@media (prefers-reduced-motion:reduce){.spin{animation:none;background:var(--ac)}.pbar i{transition:none}}

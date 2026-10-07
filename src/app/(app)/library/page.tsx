@@ -9,9 +9,9 @@ import { whenText } from "@/lib/domain/states";
 export default async function LibraryPage({
   searchParams,
 }: {
-  searchParams: Promise<{ c?: string; error?: string }>;
+  searchParams: Promise<{ c?: string; error?: string; note?: string }>;
 }) {
-  const { c, error } = await searchParams;
+  const { c, error, note } = await searchParams;
   const supabase = await createClient();
 
   const { data: coursesData } = await supabase.from("courses").select("id,name").order("created_at");
@@ -34,11 +34,18 @@ export default async function LibraryPage({
   const color = `var(--s${(index % 5) + 1})`;
   const initials = selected ? selected.name.trim().slice(0, 3).toUpperCase() : "";
 
+  const messages = (
+    <>
+      {error && <p className="err" role="alert">{error}</p>}
+      {note && <p className="note" role="status">{note}</p>}
+    </>
+  );
+
   if (!selected) {
     return (
       <>
         <h1>Library</h1>
-        {error && <p className="err" role="alert">{error}</p>}
+        {messages}
         <div className="box" style={{ textAlign: "center" }}>
           <h2 style={{ marginTop: 0 }}>No courses yet</h2>
           <p className="mute">Add a course and paste its outline. Sabiwela turns it into topics.</p>
@@ -66,7 +73,7 @@ export default async function LibraryPage({
         <AddCourseSheet variant="tab" />
       </div>
 
-      {error && <p className="err" role="alert">{error}</p>}
+      {messages}
 
       <div className="chd" style={{ ["--c" as string]: color }}>
         <div>

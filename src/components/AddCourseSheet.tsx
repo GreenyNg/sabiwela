@@ -1,10 +1,27 @@
 "use client";
-import { useRef } from "react";
+import { useCallback, useEffect, useRef } from "react";
+import { useFormStatus } from "react-dom";
 import { addCourse } from "@/app/(app)/library/actions";
+import ProgressSteps from "./ProgressSteps";
+
+function SubmitArea({ onDone }: { onDone: () => void }) {
+  const { pending } = useFormStatus();
+  const was = useRef(false);
+  useEffect(() => {
+    if (was.current && !pending) onDone();
+    was.current = pending;
+  }, [pending, onDone]);
+  return pending ? (
+    <ProgressSteps steps={["Reading your outline…", "Finding topics and subtopics…", "Listing key concepts…", "Almost done…"]} />
+  ) : (
+    <button className="btn block" style={{ marginTop: 14 }}>Add course</button>
+  );
+}
 
 export default function AddCourseSheet({ variant }: { variant: "tab" | "button" }) {
   const ref = useRef<HTMLDialogElement>(null);
   const open = () => ref.current?.showModal();
+  const close = useCallback(() => ref.current?.close(), []);
   return (
     <>
       {variant === "tab" ? (
@@ -19,14 +36,15 @@ export default function AddCourseSheet({ variant }: { variant: "tab" | "button" 
         <div className="grab" />
         <div className="row sp">
           <h3 style={{ margin: 0 }}>Add a course</h3>
-          <button type="button" className="btn ghost sm" onClick={() => ref.current?.close()}>Close</button>
+          <button type="button" className="btn ghost sm" onClick={close}>Close</button>
         </div>
-        <form action={addCourse} onSubmit={() => ref.current?.close()}>
+        <form action={addCourse}>
           <label htmlFor="cname">Course name</label>
           <input id="cname" name="name" required maxLength={120} placeholder="e.g. CSC 201" />
           <label htmlFor="coutline">Outline (optional)</label>
-          <textarea id="coutline" name="outline" rows={7} placeholder={"1. Introduction to Algorithms\n  1.1 What is an algorithm?\n2. Data Structures"} />
-          <button className="btn block" style={{ marginTop: 14 }}>Add course</button>
+          <textarea id="coutline" name="outline" rows={7} placeholder={"Paste your course outline. Numbered, bulleted or plain text all work."} />
+          <p className="mute">If you add an outline, its text is sent to an AI service (Google Gemini) to find the topics. Don&apos;t paste anything private.</p>
+          <SubmitArea onDone={close} />
         </form>
       </dialog>
     </>

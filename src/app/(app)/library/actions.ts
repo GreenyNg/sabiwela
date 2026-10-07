@@ -5,10 +5,25 @@ import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import { createClient } from "@/lib/supabase/server";
 import { parseOutline } from "@/lib/outline";
+import { getHouseLLM } from "@/lib/ai/registry";
+import { outlineSchema } from "@/lib/ai/schemas";
+import { PARSE_OUTLINE_SYSTEM, parseOutlinePrompt } from "@/lib/ai/prompts/parseOutline";
 
 const id = z.string().uuid();
 const name = z.string().trim().min(1).max(120);
 const fail = (msg: string): never => redirect(`/library?error=${encodeURIComponent(msg)}`);
+
+type Item = { name: string; parent: number | null; concepts: string[] };
+
+function fromSimpleParser(text: string): Item[] {
+  const stack: { depth: number; index: number }[] = [];
+  return parseOutline(text).map((it, i) => {
+    while (stack.length && stack[stack.length - 1].depth >= it.depth) stack.pop();
+    const parent = stack.length ? stack[stack.length - 1].index : null;
+    stack.push({ depth: it.depth, index: i });
+    return { name: it.name, parent, concepts: [] };
+  });
+}
 
 export async function addCourse(formData: FormData) {
   const parsed = z
@@ -24,22 +39,53 @@ export async function addCourse(formData: FormData) {
     .single();
   if (error || !course) return fail("Could not save the course. Please try again.");
 
-  const items = parseOutline(parsed.data.outline);
+  const outlineText = parsed.data.outline.trim();
+  let items: Item[] = [];
+  let note = "";
+
+  if (outlineText) {
+    try {
+      const result = await getHouseLLM().generateJson({
+        system: PARSE_OUTLINE_SYSTEM,
+        prompt: parseOutlinePrompt(outlineText),
+        schema: outlineSchema,
+      });
+      const firstIndex = new Map<string, number>();
+      result.topics.forEach((t, i) => {
+        const key = t.name.trim();
+        if (!firstIndex.has(key)) firstIndex.set(key, i);
+      });
+      items = result.topics.map((t, i) => {
+        const p = t.parent ? firstIndex.get(t.parent.trim()) : undefined;
+        return {
+          name: t.name.trim(),
+          parent: p !== undefined && p < i ? p : null,
+          concepts: (t.expected_concepts ?? []).map((c) => c.trim()).filter(Boolean),
+        };
+      });
+    } catch (e) {
+      console.error("Outline AI parse failed:", e instanceof Error ? e.message : e);
+      items = fromSimpleParser(outlineText);
+      note = "The AI was not available, so a simple parser read your outline. Check the topics below.";
+    }
+  }
+
   if (items.length) {
     const ids = items.map(() => crypto.randomUUID());
-    const stack: { depth: number; id: string }[] = [];
-    const rows = items.map((it, i) => {
-      while (stack.length && stack[stack.length - 1].depth >= it.depth) stack.pop();
-      const parent = stack.length ? stack[stack.length - 1].id : null;
-      stack.push({ depth: it.depth, id: ids[i] });
-      return { id: ids[i], course_id: course.id, parent_topic_id: parent, name: it.name, sort_order: i };
-    });
+    const rows = items.map((it, i) => ({
+      id: ids[i],
+      course_id: course.id,
+      parent_topic_id: it.parent !== null ? ids[it.parent] : null,
+      name: it.name,
+      sort_order: i,
+      expected_concepts: it.concepts,
+    }));
     const { error: topicError } = await supabase.from("topics").insert(rows);
     if (topicError) return fail("The course was saved, but its topics could not be.");
   }
 
   revalidatePath("/library");
-  redirect(`/library?c=${course.id}`);
+  redirect(`/library?c=${course.id}${note ? `&note=${encodeURIComponent(note)}` : ""}`);
 }
 
 export async function addTopic(formData: FormData) {
