@@ -1,15 +1,29 @@
-import Link from "next/link";
+import { notFound } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
+import StudyTimer from "@/components/StudyTimer";
 
 export default async function StudyPage({ params }: { params: Promise<{ topicId: string }> }) {
   const { topicId } = await params;
   const supabase = await createClient();
-  const { data: topic } = await supabase.from("topics").select("name").eq("id", topicId).maybeSingle();
+  const { data: topic } = await supabase
+    .from("topics")
+    .select("name,expected_concepts,courses(name)")
+    .eq("id", topicId)
+    .maybeSingle();
+  if (!topic) notFound();
+  const courseRel = Array.isArray(topic.courses) ? topic.courses[0] : topic.courses;
+  const concepts: string[] = Array.isArray(topic.expected_concepts) ? topic.expected_concepts : [];
   return (
     <>
-      <h1>{topic?.name ?? "Topic not found"}</h1>
-      <p className="mute">The study timer and explain step are coming next.</p>
-      <Link href="/library" className="btn ghost">Back to Library</Link>
+      <div className="mute">{courseRel?.name}</div>
+      <h1>{topic.name}</h1>
+      <StudyTimer topicId={topicId} />
+      {concepts.length > 0 && (
+        <details className="box">
+          <summary>Peek at the key concepts (optional)</summary>
+          <ul>{concepts.map((c, i) => <li key={i}>{c}</li>)}</ul>
+        </details>
+      )}
     </>
   );
 }

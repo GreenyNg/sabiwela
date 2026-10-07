@@ -14,3 +14,14 @@ export const outlineSchema = z.object({
     .max(200),
 });
 export type OutlineResult = z.infer<typeof outlineSchema>;
+
+export const assessmentSchema = z.object({
+  score: z.number().min(0).max(100),
+  strengths: z.array(z.string().max(300)).max(6).optional(),
+  missing: z.array(z.string().max(300)).max(6).optional(),
+  misconceptions: z.array(z.string().max(300)).max(5).optional(),
+  feedback: z.string().max(900),
+  revisit: z.string().max(300),
+  followups: z.array(z.string().max(300)).max(2).optional(),
+});
+export type AssessmentResult = z.infer<typeof assessmentSchema>;

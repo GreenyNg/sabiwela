@@ -58,3 +58,11 @@ dialog.sheet::backdrop{background:rgba(0,0,0,.45)}.grab{width:40px;height:4px;bo
 .pbar{height:6px;border-radius:9px;background:var(--line);overflow:hidden;margin-top:8px}
 .pbar i{display:block;height:100%;background:var(--ac);transition:width 2.5s ease}
 @media (prefers-reduced-motion:reduce){.spin{animation:none;background:var(--ac)}.pbar i{transition:none}}
+.big{font-family:var(--font-head),serif;font-size:2.6rem;margin:6px 0}
+.lead{font-size:1.15rem}
+.ring{width:120px;height:120px;border-radius:50%;background:conic-gradient(var(--c) calc(var(--p)*1%),var(--line) 0);display:grid;place-items:center;flex:none}
+.ring b{width:92px;height:92px;border-radius:50%;background:var(--bg);display:grid;place-items:center;font:700 2rem var(--font-head),serif}
+.pn{border-radius:14px;padding:14px 16px;margin:10px 0;background:color-mix(in srgb,var(--c) 13%,var(--card));border:1px solid color-mix(in srgb,var(--c) 35%,transparent)}
+.pn h3{font:700 1rem var(--font-body),sans-serif;color:var(--c);margin:0 0 4px}
+ul{padding-left:18px;margin:4px 0}
+details summary{cursor:pointer;font-weight:600}
